@@ -231,3 +231,8 @@ build_desktop.bat
 ## 12. License
 
 如需开源发布，请在仓库根目录补充 `LICENSE` 文件并在此处声明许可证类型。
+
+
+## 13. Link
+
+[Linux do](https://linux.do/) - 学AI，上L站！真诚、友善、团结、专业，共建你我引以为荣之社区。
