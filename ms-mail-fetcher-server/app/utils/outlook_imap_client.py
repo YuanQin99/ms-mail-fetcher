@@ -12,6 +12,17 @@ INBOX_FOLDER_NAME = "INBOX"
 JUNK_FOLDER_NAME = "Junk"
 
 
+def _looks_like_html(content: str) -> bool:
+    if not content:
+        return False
+    text = content.lstrip().lower()
+    return (
+        text.startswith("<!doctype html")
+        or text.startswith("<html")
+        or ("<body" in text and "</body>" in text)
+    )
+
+
 def decode_header_value(header_value):
     """辅助函数：解码邮件头中的中文字符等"""
     if header_value is None: return ""
@@ -295,12 +306,26 @@ def get_email_detail_by_uid(email_address, refresh_token, client_id, target_uid,
                 charset = email_message.get_content_charset() or 'utf-8'
                 payload = email_message.get_payload(decode=True)
                 if payload:
-                    body_text = payload.decode(charset, errors='replace')
+                    decoded_str = payload.decode(charset, errors='replace')
+                    content_type = email_message.get_content_type()
+                    if content_type == "text/html":
+                        body_html = decoded_str
+                    else:
+                        body_text = decoded_str
             except Exception:
                 pass
 
-        result["detail"]["body_text"] = body_text.strip()
-        result["detail"]["body_html"] = body_html.strip()
+        body_text = body_text.strip()
+        body_html = body_html.strip()
+
+        # 兜底：部分邮件服务会把 HTML 正文错误标为 text/plain。
+        # 遇到这种情况，把看起来像 HTML 的正文转到 body_html，供前端渲染。
+        if not body_html and _looks_like_html(body_text):
+            body_html = body_text
+            body_text = ""
+
+        result["detail"]["body_text"] = body_text
+        result["detail"]["body_html"] = body_html
         result["success"] = True
         return result
 

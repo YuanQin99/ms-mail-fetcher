@@ -26,6 +26,20 @@ const pageCount = computed(() => Math.max(Math.ceil(total.value / pageSize.value
 
 const folderText = computed(() => (folder.value === 'spam' ? '垃圾箱' : '收件箱'))
 
+function looksLikeHtml(content) {
+    if (!content) return false
+    const text = String(content).trimStart().toLowerCase()
+    return text.startsWith('<!doctype html') || text.startsWith('<html') || (text.includes('<body') && text.includes('</body>'))
+}
+
+const renderedBodyHtml = computed(() => {
+    const detail = currentDetail.value
+    if (!detail) return ''
+    if (detail.body_html) return detail.body_html
+    if (looksLikeHtml(detail.body_text)) return detail.body_text
+    return ''
+})
+
 async function fetchMails() {
     if (!accountId.value) return
 
@@ -120,7 +134,7 @@ onMounted(fetchMails)
                     <div><b>时间：</b>{{ currentDetail.date || '-' }}</div>
                 </div>
                 <el-divider />
-                <div class="mail-body" v-if="currentDetail.body_html" v-html="currentDetail.body_html"></div>
+                <div class="mail-body" v-if="renderedBodyHtml" v-html="renderedBodyHtml"></div>
                 <pre v-else class="mail-text">{{ currentDetail.body_text || '(无正文)' }}</pre>
             </template>
             <el-empty v-else description="暂无详情" />
