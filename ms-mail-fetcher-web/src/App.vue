@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Fold, Expand, User, Box } from '@element-plus/icons-vue'
 import { getAccounts, getUiPreferences, updateUiPreferences } from '@/api/accounts'
@@ -77,6 +77,7 @@ async function fetchOverviewCounts() {
 function onAccountsChanged() {
   fetchOverviewCounts()
 }
+
 
 onMounted(async () => {
   await loadSidebarCollapsedState()
@@ -289,3 +290,5 @@ onBeforeUnmount(() => {
   flex: 1;
 }
 </style>
+
+

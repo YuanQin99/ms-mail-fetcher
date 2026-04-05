@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -10,7 +10,7 @@ const router = useRouter()
 
 const accountId = computed(() => Number(route.params.accountId))
 const folder = computed(() => String(route.params.folder || 'inbox'))
-const email = computed(() => String(route.query.email || `账号 #${accountId.value}`))
+const email = computed(() => String(route.query.email || `\u8d26\u53f7 #${accountId.value}`))
 
 const loading = ref(false)
 const detailLoading = ref(false)
@@ -24,7 +24,7 @@ const detailDialogVisible = ref(false)
 const currentDetail = ref(null)
 
 const pageCount = computed(() => Math.max(Math.ceil(total.value / pageSize.value), 1))
-const folderText = computed(() => (folder.value === 'spam' ? '垃圾箱' : '收件箱'))
+const folderText = computed(() => (folder.value === 'spam' ? '\u5783\u573e\u7bb1' : '\u6536\u4ef6\u7bb1'))
 
 function looksLikeHtml(content) {
     if (!content) return false
@@ -44,9 +44,25 @@ const renderedBodySrcdoc = computed(() => {
     const html = renderedBodyHtml.value
     if (!html) return ''
 
-    const lower = html.trimStart().toLowerCase()
+    const normalizedHtml = html.replace(/<a\b([^>]*?)>/gi, (match, attrs) => {
+        let nextAttrs = attrs
+
+        if (!/\btarget\s*=/i.test(nextAttrs)) {
+            nextAttrs += ' target="_blank"'
+        } else {
+            nextAttrs = nextAttrs.replace(/\btarget\s*=\s*(['"]?)[^'"\s>]+\1?/i, 'target="_blank"')
+        }
+
+        if (!/\brel\s*=/i.test(nextAttrs)) {
+            nextAttrs += ' rel="noopener noreferrer"'
+        }
+
+        return `<a${nextAttrs}>`
+    })
+
+    const lower = normalizedHtml.trimStart().toLowerCase()
     if (lower.startsWith('<!doctype html') || lower.startsWith('<html')) {
-        return html
+        return normalizedHtml
     }
 
     return `<!DOCTYPE html>
@@ -72,7 +88,7 @@ const renderedBodySrcdoc = computed(() => {
       }
     </style>
   </head>
-  <body>${html}</body>
+  <body>${normalizedHtml}</body>
 </html>`
 })
 
@@ -88,7 +104,7 @@ async function fetchMails() {
         rows.value = data.items || []
         total.value = data.total || 0
     } catch (error) {
-        ElMessage.error(error.message || '读取邮件列表失败')
+        ElMessage.error(error.message || '\u8bfb\u53d6\u90ae\u4ef6\u5217\u8868\u5931\u8d25')
     } finally {
         loading.value = false
     }
@@ -102,7 +118,7 @@ async function onViewDetail(row) {
         currentDetail.value = data.detail
     } catch (error) {
         currentDetail.value = null
-        ElMessage.error(error.message || '读取邮件详情失败')
+        ElMessage.error(error.message || '\u8bfb\u53d6\u90ae\u4ef6\u8be6\u60c5\u5931\u8d25')
     } finally {
         detailLoading.value = false
     }
@@ -158,25 +174,25 @@ onMounted(fetchMails)
         <el-card shadow="never" class="premium-card">
             <template #header>
                 <div class="header-row">
-                    <div class="title">正在查看: {{ email }} - {{ folderText }}</div>
+                    <div class="title">&#27491;&#22312;&#26597;&#30475;: {{ email }} - {{ folderText }}</div>
                     <div class="header-actions">
-                        <el-button :icon="Refresh" :loading="loading" @click="onRefreshMails">刷新列表</el-button>
-                        <el-button @click="goBack">返回上一页</el-button>
+                        <el-button :icon="Refresh" :loading="loading" @click="onRefreshMails">&#21047;&#26032;&#21015;&#34920;</el-button>
+                        <el-button @click="goBack">&#36820;&#22238;&#19978;&#19968;&#39029;</el-button>
                     </div>
                 </div>
             </template>
 
             <el-table v-loading="loading" :data="rows" border stripe>
-                <el-table-column prop="from_name" label="发件人" min-width="220" show-overflow-tooltip>
+                <el-table-column prop="from_name" label="&#21457;&#20214;&#20154;" min-width="220" show-overflow-tooltip>
                     <template #default="{ row }">
                         <span>{{ row.from_name || row.from_email || '-' }}</span>
                     </template>
                 </el-table-column>
-                <el-table-column prop="subject" label="主题" min-width="320" show-overflow-tooltip />
-                <el-table-column prop="date" label="接收时间" min-width="180" />
-                <el-table-column label="操作" width="120" fixed="right">
+                <el-table-column prop="subject" label="&#20027;&#39064;" min-width="320" show-overflow-tooltip />
+                <el-table-column prop="date" label="&#25509;&#25910;&#26102;&#38388;" min-width="180" />
+                <el-table-column label="&#25805;&#20316;" width="120" fixed="right">
                     <template #default="{ row }">
-                        <el-button type="primary" link @click="onViewDetail(row)">查看详情</el-button>
+                        <el-button type="primary" link @click="onViewDetail(row)">&#26597;&#30475;&#35814;&#24773;</el-button>
                     </template>
                 </el-table-column>
             </el-table>
@@ -188,32 +204,32 @@ onMounted(fetchMails)
             </div>
         </el-card>
 
-        <el-dialog v-model="detailDialogVisible" width="960px" title="邮件详情" top="4vh" class="mail-detail-dialog">
+        <el-dialog v-model="detailDialogVisible" width="960px" title="&#37038;&#20214;&#35814;&#24773;" top="4vh" class="mail-detail-dialog">
             <el-skeleton v-if="detailLoading" :rows="8" animated />
             <template v-else>
                 <template v-if="currentDetail">
                     <div class="detail-shell">
                         <div class="detail-meta">
-                            <div><b>主题: </b>{{ currentDetail.subject || '-' }}</div>
-                            <div><b>发件人: </b>{{ currentDetail.from || '-' }}</div>
-                            <div><b>收件人: </b>{{ currentDetail.to || '-' }}</div>
-                            <div><b>时间: </b>{{ currentDetail.date || '-' }}</div>
+                            <div><b>&#20027;&#39064;: </b>{{ currentDetail.subject || '-' }}</div>
+                            <div><b>&#21457;&#20214;&#20154;: </b>{{ currentDetail.from || '-' }}</div>
+                            <div><b>&#25910;&#20214;&#20154;: </b>{{ currentDetail.to || '-' }}</div>
+                            <div><b>&#26102;&#38388;: </b>{{ currentDetail.date || '-' }}</div>
                         </div>
 
                         <div class="mail-body-panel">
-                            <div class="mail-body-toolbar">正文预览</div>
+                            <div class="mail-body-toolbar">&#27491;&#25991;&#39044;&#35272;</div>
                             <iframe
                                 v-if="renderedBodyHtml"
                                 class="mail-body-frame"
                                 :srcdoc="renderedBodySrcdoc"
-                                sandbox=""
+                                sandbox="allow-popups allow-popups-to-escape-sandbox"
                                 referrerpolicy="no-referrer"
                             />
-                            <pre v-else class="mail-text">{{ currentDetail.body_text || '(无正文)' }}</pre>
+                            <pre v-else class="mail-text">{{ currentDetail.body_text || '(&#26080;&#27491;&#25991;)' }}</pre>
                         </div>
                     </div>
                 </template>
-                <el-empty v-else description="暂无详情" />
+                <el-empty v-else description="&#26242;&#26080;&#35814;&#24773;" />
             </template>
         </el-dialog>
     </div>

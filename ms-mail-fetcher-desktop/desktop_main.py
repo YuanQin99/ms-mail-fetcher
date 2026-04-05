@@ -1,4 +1,4 @@
-﻿import ctypes
+import ctypes
 import inspect
 import logging
 import os
@@ -11,6 +11,7 @@ from pathlib import Path
 import requests
 import uvicorn
 import webview
+from webview.platforms.edgechromium import EdgeChrome
 
 DESKTOP_ROOT = Path(__file__).resolve().parent
 SERVER_ROOT = DESKTOP_ROOT.parent / 'ms-mail-fetcher-server'
@@ -40,6 +41,23 @@ MIN_WINDOW_HEIGHT = 760
 DEFAULT_WINDOW_WIDTH = 1280
 DEFAULT_WINDOW_HEIGHT = 860
 
+_original_on_webview_ready = EdgeChrome.on_webview_ready
+
+
+def _patched_on_webview_ready(self, sender, args):
+    _original_on_webview_ready(self, sender, args)
+
+    if not args.IsSuccess:
+        return
+
+    settings = sender.CoreWebView2.Settings
+    settings.AreBrowserAcceleratorKeysEnabled = False
+    settings.AreDefaultContextMenusEnabled = True
+    settings.AreDevToolsEnabled = False
+    settings.IsStatusBarEnabled = False
+
+
+EdgeChrome.on_webview_ready = _patched_on_webview_ready
 
 class _SingleInstanceGuard:
     def __init__(self, name: str):
