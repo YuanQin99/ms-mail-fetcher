@@ -1,4 +1,4 @@
-import { buildUrl, request } from './http'
+﻿import { buildUrl, request } from './http'
 
 export function getAccounts(params) {
   return request('/api/accounts', {}, params)
@@ -12,12 +12,12 @@ export function createAccount(payload) {
   })
 }
 
-export function updateAccount(id, payload) {
+export function updateAccount(id, payload, params = {}) {
   return request(`/api/accounts/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
-  })
+  }, params)
 }
 
 export function archiveAccount(id) {
@@ -32,8 +32,8 @@ export function archiveAllAccounts() {
   return request('/api/accounts/archive-all', { method: 'PUT' })
 }
 
-export function deleteAccount(id) {
-  return request(`/api/accounts/${id}`, { method: 'DELETE' })
+export function deleteAccount(id, params = {}) {
+  return request(`/api/accounts/${id}`, { method: 'DELETE' }, params)
 }
 
 export function importAccounts(formData) {
@@ -56,8 +56,8 @@ export function getMailList(accountId, folder, params) {
   return request(`/api/accounts/${accountId}/mail/${folder}`, {}, params)
 }
 
-export function getMailDetail(accountId, folder, messageId) {
-  return request(`/api/accounts/${accountId}/mail/${folder}/${messageId}`)
+export function getMailDetail(accountId, folder, messageId, params) {
+  return request(`/api/accounts/${accountId}/mail/${folder}/${messageId}`, {}, params)
 }
 
 export function getAccountTypes() {

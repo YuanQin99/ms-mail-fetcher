@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 
 from pydantic import BaseModel, Field
 
@@ -30,6 +30,7 @@ class AccountOut(AccountBase):
     id: int
     last_refresh_time: datetime
     days_since_refresh: int = Field(default=0)
+    source_account_id: int | None = None
 
     model_config = {"from_attributes": True}
 

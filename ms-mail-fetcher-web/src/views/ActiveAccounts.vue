@@ -38,6 +38,9 @@ const selectedRows = ref([])
 const batchType = ref('')
 const batchTypeDialogVisible = ref(false)
 const batchTypeSaving = ref(false)
+const batchRemark = ref('')
+const batchRemarkDialogVisible = ref(false)
+const batchRemarkSaving = ref(false)
 const typeDialogVisible = ref(false)
 const typeCreateForm = ref({ code: '', label: '', color: '#409EFF' })
 const savingType = ref(false)
@@ -161,6 +164,7 @@ function goMail(row, folder) {
         path: `/mail/${row.id}/${folder}`,
         query: {
             email: row.email,
+            is_active: 'true',
             _from: '/active',
             _page: String(page.value),
             _page_size: String(pageSize.value),
@@ -296,7 +300,7 @@ async function onBatchUpdateType() {
         )
 
         const results = await Promise.allSettled(
-            selectedRows.value.map((row) => updateAccount(row.id, { account_type: batchType.value })),
+            selectedRows.value.map((row) => updateAccount(row.id, { account_type: batchType.value }, { is_active: true })),
         )
         const successCount = results.filter((r) => r.status === 'fulfilled').length
         const failedCount = results.length - successCount
@@ -327,6 +331,57 @@ function onOpenBatchTypeDialog() {
     batchTypeDialogVisible.value = true
 }
 
+function onOpenBatchRemarkDialog() {
+    if (!selectedRows.value.length) {
+        ElMessage.warning('请先勾选账号')
+        return
+    }
+    batchRemark.value = ''
+    batchRemarkDialogVisible.value = true
+}
+
+async function onBatchUpdateRemark() {
+    if (!selectedRows.value.length) {
+        ElMessage.warning('请先勾选账号')
+        return
+    }
+
+    batchRemarkSaving.value = true
+    try {
+        await ElMessageBox.confirm(
+            `确认将已选 ${selectedRows.value.length} 个账号的备注批量修改为当前内容吗？`,
+            '批量备注确认',
+            {
+                type: 'warning',
+                confirmButtonText: '确认修改',
+                cancelButtonText: '取消',
+            },
+        )
+
+        const remarkValue = batchRemark.value.trim()
+        const results = await Promise.allSettled(
+            selectedRows.value.map((row) => updateAccount(row.id, { remark: remarkValue || null }, { is_active: true })),
+        )
+        const successCount = results.filter((r) => r.status === 'fulfilled').length
+        const failedCount = results.length - successCount
+
+        if (failedCount > 0) {
+            ElMessage.warning(`批量备注完成：成功 ${successCount}，失败 ${failedCount}`)
+        } else {
+            ElMessage.success(`批量备注完成：共 ${successCount} 条`)
+        }
+
+        selectedRows.value = []
+        batchRemark.value = ''
+        batchRemarkDialogVisible.value = false
+        await fetchData()
+    } catch {
+        // canceled
+    } finally {
+        batchRemarkSaving.value = false
+    }
+}
+
 function onOpenDetail(row) {
     detailEditMode.value = false
     editForm.value = {
@@ -354,7 +409,7 @@ async function onSaveEdit() {
         await updateAccount(editForm.value.id, {
             account_type: editForm.value.account_type || null,
             remark: editForm.value.remark || null,
-        })
+        }, { is_active: true })
         ElMessage.success('账号信息已更新')
         detailEditMode.value = false
         await fetchData()
@@ -455,15 +510,9 @@ async function onDeleteType(item) {
     }
 }
 
-function _timestampText() {
-    const now = new Date()
-    const pad = (n) => String(n).padStart(2, '0')
-    return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
-}
-
 function onExportSelected() {
     if (!selectedRows.value.length) {
-        ElMessage.warning('\u8bf7\u5148\u52fe\u9009\u8d26\u53f7')
+        ElMessage.warning('请先勾选账号')
         return
     }
 
@@ -583,6 +632,9 @@ onMounted(async () => {
                         <el-button type="primary" plain :disabled="!selectedRows.length" @click="onOpenBatchTypeDialog">
                             批量改类型（{{ selectedRows.length }}）
                         </el-button>
+                        <el-button type="primary" plain :disabled="!selectedRows.length" @click="onOpenBatchRemarkDialog">
+                            批量改备注（{{ selectedRows.length }}）
+                        </el-button>
                         <el-button type="warning" plain :disabled="!selectedRows.length"
                             @click="onBatchArchiveSelected">
                             批量归档已选（{{ selectedRows.length }}）
@@ -595,6 +647,11 @@ onMounted(async () => {
             <el-table v-loading="loading" :data="rows" border stripe @selection-change="onSelectionChange"
                 style="flex: 1; height: 100%; min-height: 0;">
                 <el-table-column type="selection" width="48" />
+                <el-table-column label="序号" width="80" align="center">
+                    <template #default="{ $index }">
+                        {{ (page - 1) * pageSize + $index + 1 }}
+                    </template>
+                </el-table-column>
                 <el-table-column label="邮箱" min-width="200">
                     <template #default="{ row }">
                         <div class="copy-cell">
@@ -611,24 +668,6 @@ onMounted(async () => {
                         </div>
                     </template>
                 </el-table-column>
-                <!-- 这个东西不要删 只是暂时注释 -->
-                <!-- <el-table-column label="Client ID" min-width="220">
-                    <template #default="{ row }">
-                        <div class="copy-cell">
-                            <span class="truncate-text">{{ row.client_id }}</span>
-                            <el-button link type="primary" :icon="CopyDocument" @click="handleCopy(row.client_id)" />
-                        </div>
-                    </template>
-                </el-table-column>
-                <el-table-column label="Refresh Token" min-width="280">
-                    <template #default="{ row }">
-                        <div class="copy-cell">
-                            <span class="truncate-text">{{ row.refresh_token }}</span>
-                            <el-button link type="primary" :icon="CopyDocument"
-                                @click="handleCopy(row.refresh_token)" />
-                        </div>
-                    </template>
-                </el-table-column> -->
                 <el-table-column label="距上次刷新天数" width="140" align="center">
                     <template #default="{ row }">
                         <el-tag :type="row.days_since_refresh > thresholdDays ? 'danger' : 'success'" effect="light"
@@ -706,8 +745,7 @@ onMounted(async () => {
                 </el-table-column>
                 <el-table-column label="预览" width="120" align="center">
                     <template #default="{ row }">
-                        <el-tag :color="typeEditCache[row.id].color" effect="dark">{{ typeEditCache[row.id].label
-                            }}</el-tag>
+                        <el-tag :color="typeEditCache[row.id].color" effect="dark">{{ typeEditCache[row.id].label }}</el-tag>
                     </template>
                 </el-table-column>
                 <el-table-column label="操作" width="180" align="center">
@@ -758,6 +796,20 @@ onMounted(async () => {
             <template #footer>
                 <el-button @click="batchTypeDialogVisible = false">取消</el-button>
                 <el-button type="primary" :loading="batchTypeSaving" @click="onBatchUpdateType">确认修改</el-button>
+            </template>
+        </el-dialog>
+
+        <el-dialog v-model="batchRemarkDialogVisible" title="批量修改备注" width="520px">
+            <el-alert type="info" :closable="false" show-icon :title="`将修改已选中的 ${selectedRows.length} 个账号备注`"
+                class="mb-12" />
+            <el-form label-width="90px">
+                <el-form-item label="备注">
+                    <el-input v-model="batchRemark" type="textarea" :rows="4" placeholder="留空则清空备注" />
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="batchRemarkDialogVisible = false">取消</el-button>
+                <el-button type="primary" :loading="batchRemarkSaving" @click="onBatchUpdateRemark">确认修改</el-button>
             </template>
         </el-dialog>
     </div>
